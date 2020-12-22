@@ -58,13 +58,13 @@ class LoadDataFixturesDoctrineCommand extends DoctrineCommand
         $this
             ->setName('doctrine:fixtures:load')
             ->setDescription('Load data fixtures to your database')
-            ->addOption('append', null, InputOption::VALUE_NONE, 'Append the data fixtures instead of deleting all data from the database first.')
-            ->addOption('group', null, InputOption::VALUE_IS_ARRAY|InputOption::VALUE_REQUIRED, 'Only load fixtures that belong to this group')
+            ->addOption('append', null, InputOption::VALUE_NONE, 'Append the data fixtures instead of deleting all data from the database first (no effect in this version).')
+            ->addOption('group', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, 'Only load fixtures that belong to this group')
             ->addOption('em', null, InputOption::VALUE_REQUIRED, 'The entity manager to use for this command.')
-            ->addOption('purger', null, InputOption::VALUE_REQUIRED, 'The purger to use for this command', 'default')
-            ->addOption('purge-exclusions', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, 'List of database tables to ignore while purging')
+            ->addOption('purger', null, InputOption::VALUE_REQUIRED, 'The purger to use for this command (no effect in this version)', 'default')
+            ->addOption('purge-exclusions', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, 'List of database tables to ignore while purging (no effect in this version)')
             ->addOption('shard', null, InputOption::VALUE_REQUIRED, 'The shard connection to use for this command.')
-            ->addOption('purge-with-truncate', null, InputOption::VALUE_NONE, 'Purge data by using a database-level TRUNCATE statement')
+            ->addOption('purge-with-truncate', null, InputOption::VALUE_NONE, 'Purge data by using a database-level TRUNCATE statement (no effect in this version)')
             ->setHelp(<<<EOT
 The <info>%command.name%</info> command loads data fixtures from your application:
 
@@ -72,21 +72,13 @@ The <info>%command.name%</info> command loads data fixtures from your applicatio
 
 Fixtures are services that are tagged with <comment>doctrine.fixture.orm</comment>.
 
-If you want to append the fixtures instead of flushing the database first you can use the <comment>--append</comment> option:
-
-  <info>php %command.full_name%</info> <comment>--append</comment>
-
-By default Doctrine Data Fixtures uses DELETE statements to drop the existing rows from the database.
-If you want to use a TRUNCATE statement instead you can use the <comment>--purge-with-truncate</comment> flag:
-
-  <info>php %command.full_name%</info> <comment>--purge-with-truncate</comment>
+This version does not purge the database. Therefor the append and purger options have no effect. Fixtures are always appended.
 
 To execute only fixtures that live in a certain group, use:
 
   <info>php %command.full_name%</info> <comment>--group=group1</comment>
 
-EOT
-        );
+EOT);
     }
 
     /**
@@ -99,14 +91,12 @@ EOT
 
         $em = $this->getDoctrine()->getManager($input->getOption('em'));
 
-        if (! $input->getOption('append')) {
-            if (! $ui->confirm(sprintf('Careful, database "%s" will be purged. Do you want to continue?', $em->getConnection()->getDatabase()), ! $input->isInteractive())) {
-                return 0;
-            }
+        if (!$input->getOption('append')) {
+            $ui->info('This version will always append and never purge');
         }
 
         if ($input->getOption('shard')) {
-            if (! $em->getConnection() instanceof PoolingShardConnection) {
+            if (!$em->getConnection() instanceof PoolingShardConnection) {
                 throw new LogicException(sprintf(
                     'Connection of EntityManager "%s" must implement shards configuration.',
                     $input->getOption('em')
@@ -118,10 +108,10 @@ EOT
 
         $groups   = $input->getOption('group');
         $fixtures = $this->fixturesLoader->getFixtures($groups);
-        if (! $fixtures) {
+        if (!$fixtures) {
             $message = 'Could not find any fixture services to load';
 
-            if (! empty($groups)) {
+            if (!empty($groups)) {
                 $message .= sprintf(' in the groups (%s)', implode(', ', $groups));
             }
 
@@ -130,7 +120,7 @@ EOT
             return 1;
         }
 
-        if (! isset($this->purgerFactories[$input->getOption('purger')])) {
+        if (!isset($this->purgerFactories[$input->getOption('purger')])) {
             $ui->warning(sprintf(
                 'Could not find purger factory with alias "%1$s", using default purger. Did you forget to register the %2$s implementation with tag "%3$s" and alias "%1$s"?',
                 $input->getOption('purger'),
@@ -142,17 +132,14 @@ EOT
             $factory = $this->purgerFactories[$input->getOption('purger')];
         }
 
-        $purger   = $factory->createForEntityManager(
-            $input->getOption('em'),
-            $em,
-            $input->getOption('purge-exclusions'),
-            $input->getOption('purge-with-truncate')
-        );
-        $executor = new ORMExecutor($em, $purger);
-        $executor->setLogger(static function ($message) use ($ui) : void {
+        // Removed purger
+        $executor = new ORMExecutor($em);
+        $executor->setLogger(static function ($message) use ($ui): void {
             $ui->text(sprintf('  <comment>></comment> <info>%s</info>', $message));
         });
-        $executor->execute($fixtures, $input->getOption('append'));
+
+        // Hardcoded to always append and never purge
+        $executor->execute($fixtures, true);
 
         return 0;
     }
