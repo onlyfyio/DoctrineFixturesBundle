@@ -92,7 +92,7 @@ EOT);
         $em = $this->getDoctrine()->getManager($input->getOption('em'));
 
         if (!$input->getOption('append')) {
-            $ui->info('This version will always append and never purge');
+            $ui->text('This version will always append and never purge');
         }
 
         if ($input->getOption('shard')) {
