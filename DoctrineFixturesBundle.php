@@ -9,12 +9,9 @@ use Doctrine\Bundle\FixturesBundle\DependencyInjection\CompilerPass\PurgerFactor
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 
-/**
- * Bundle.
- */
 class DoctrineFixturesBundle extends Bundle
 {
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.TypeHintDeclaration.MissingReturnTypeHint
+    /** @return void */
     public function build(ContainerBuilder $container)
     {
         $container->addCompilerPass(new FixturesCompilerPass());

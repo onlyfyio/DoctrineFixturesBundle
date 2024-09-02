@@ -11,16 +11,20 @@ use Doctrine\Bundle\FixturesBundle\Purger\ORMPurgerFactory;
 use Doctrine\Bundle\FixturesBundle\Purger\PurgerFactory;
 use Doctrine\Common\DataFixtures\Executor\ORMExecutor;
 use Doctrine\DBAL\Sharding\PoolingShardConnection;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use LogicException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use const E_USER_DEPRECATED;
+
+use function assert;
 use function implode;
 use function sprintf;
 use function trigger_error;
+
+use const E_USER_DEPRECATED;
 
 /**
  * Load data fixtures from bundles.
@@ -33,9 +37,7 @@ class LoadDataFixturesDoctrineCommand extends DoctrineCommand
     /** @var PurgerFactory[] */
     private $purgerFactories;
 
-    /**
-     * @param PurgerFactory[] $purgerFactories
-     */
+    /** @param PurgerFactory[] $purgerFactories */
     public function __construct(SymfonyFixturesLoader $fixturesLoader, ?ManagerRegistry $doctrine = null, array $purgerFactories = [])
     {
         if ($doctrine === null) {
@@ -52,7 +54,7 @@ class LoadDataFixturesDoctrineCommand extends DoctrineCommand
         $this->purgerFactories = $purgerFactories;
     }
 
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.TypeHintDeclaration.MissingReturnTypeHint
+    /** @return void */
     protected function configure()
     {
         $this
@@ -81,15 +83,13 @@ To execute only fixtures that live in a certain group, use:
 EOT);
     }
 
-    /**
-     * @return int
-     */
-    // phpcs:ignore SlevomatCodingStandard.TypeHints.TypeHintDeclaration.MissingReturnTypeHint
+    /** @return int */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $ui = new SymfonyStyle($input, $output);
 
         $em = $this->getDoctrine()->getManager($input->getOption('em'));
+        assert($em instanceof EntityManagerInterface);
 
         if (!$input->getOption('append')) {
             $ui->text('This version will always append and never purge');
