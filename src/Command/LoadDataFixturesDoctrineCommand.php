@@ -61,12 +61,12 @@ class LoadDataFixturesDoctrineCommand extends DoctrineCommand
         $this
             ->setName('doctrine:fixtures:load')
             ->setDescription('Load data fixtures to your database')
-            ->addOption('append', null, InputOption::VALUE_NONE, 'Append the data fixtures instead of deleting all data from the database first.')
+            ->addOption('append', null, InputOption::VALUE_NONE, 'Append the data fixtures instead of deleting all data from the database first (no effect in this ATS-fork).')
             ->addOption('group', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, 'Only load fixtures that belong to this group')
             ->addOption('em', null, InputOption::VALUE_REQUIRED, 'The entity manager to use for this command.')
-            ->addOption('purger', null, InputOption::VALUE_REQUIRED, 'The purger to use for this command', 'default')
-            ->addOption('purge-exclusions', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, 'List of database tables to ignore while purging')
-            ->addOption('purge-with-truncate', null, InputOption::VALUE_NONE, 'Purge data by using a database-level TRUNCATE statement')
+            ->addOption('purger', null, InputOption::VALUE_REQUIRED, 'The purger to use for this command (no effect in this ATS-fork)', 'default')
+            ->addOption('purge-exclusions', null, InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED, 'List of database tables to ignore while purging (no effect in this ATS-fork)')
+            ->addOption('purge-with-truncate', null, InputOption::VALUE_NONE, 'Purge data by using a database-level TRUNCATE statement (no effect in this ATS-fork)')
             ->setHelp(<<<'EOT'
                 The <info>%command.name%</info> command loads data fixtures from your application:
                 
@@ -74,14 +74,7 @@ class LoadDataFixturesDoctrineCommand extends DoctrineCommand
                 
                 Fixtures are services that are tagged with <comment>doctrine.fixture.orm</comment>.
                 
-                If you want to append the fixtures instead of flushing the database first you can use the <comment>--append</comment> option:
-                
-                  <info>php %command.full_name%</info> <comment>--append</comment>
-                
-                By default Doctrine Data Fixtures uses DELETE statements to drop the existing rows from the database.
-                If you want to use a TRUNCATE statement instead you can use the <comment>--purge-with-truncate</comment> flag:
-                
-                  <info>php %command.full_name%</info> <comment>--purge-with-truncate</comment>
+                This ATS-fork does not purge the database. Therefor the append and purger options have no effect. Fixtures are always appended.
                 
                 To execute only fixtures that live in a certain group, use:
                 
@@ -98,9 +91,7 @@ class LoadDataFixturesDoctrineCommand extends DoctrineCommand
         assert($em instanceof EntityManagerInterface);
 
         if (! $input->getOption('append')) {
-            if (! $ui->confirm(sprintf('Careful, database "%s" will be purged. Do you want to continue?', $em->getConnection()->getDatabase()), ! $input->isInteractive())) {
-                return 0;
-            }
+            $ui->text('This ATS-fork will always append and never purge');
         }
 
         $groups   = $input->getOption('group');
@@ -129,14 +120,7 @@ class LoadDataFixturesDoctrineCommand extends DoctrineCommand
             $factory = $this->purgerFactories[$input->getOption('purger')];
         }
 
-        $purger = $factory->createForEntityManager(
-            $input->getOption('em'),
-            $em,
-            $input->getOption('purge-exclusions'),
-            $input->getOption('purge-with-truncate'),
-        );
-        assert($purger instanceof ORMPurgerInterface);
-        $executor = new ORMExecutor($em, $purger);
+        $executor = new ORMExecutor($em);
         $executor->setLogger(new class ($ui) extends AbstractLogger {
             private SymfonyStyle $ui;
 
@@ -158,8 +142,7 @@ class LoadDataFixturesDoctrineCommand extends DoctrineCommand
             }
         });
 
-        $executor->execute($fixtures, $input->getOption('append'));
-
+        $executor->execute($fixtures, true);
         return 0;
     }
 }
